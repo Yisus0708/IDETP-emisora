@@ -37,17 +37,32 @@ app.get('/panel-emisora', (req, res) => {
 // descifrado internamente, que es más confiable que reimplementarlo aquí.
 // ---------------------------------------------------------------------------
 const YOUTUBE_URL_RE = /^https?:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|shorts\/|live\/)|youtu\.be\/)/i;
-const YOUTUBE_FETCH_ATTEMPTS = 2;
+// Alojado en la nube (p. ej. Render), la IP del servidor es de datacenter y
+// YouTube suele frenarla con bot-detection ("Sign in to confirm you're not
+// a bot") o simplemente responder muy lento cuando yt-dlp usa el cliente
+// "web" por defecto. El cliente "android" evita bastante de eso porque no
+// depende del reproductor JS de YouTube para descifrar firmas. Se prueba
+// android primero (rápido) y web como respaldo si un video en particular no
+// tiene formatos para android.
+const YOUTUBE_CLIENTS_BY_ATTEMPT = ['android', 'web'];
+const YOUTUBE_FETCH_ATTEMPTS = YOUTUBE_CLIENTS_BY_ATTEMPT.length;
 // Si yt-dlp no entrega ningún byte en este tiempo (extracción colgada, red
 // lenta, YouTube bloqueando la petición sin que yt-dlp lo reporte como error),
 // lo matamos y reintentamos en vez de dejar al navegador "cargando" para
 // siempre sin ninguna señal de error.
-const YOUTUBE_START_TIMEOUT_MS = 15000;
+const YOUTUBE_START_TIMEOUT_MS = 20000;
 
 function streamYoutube(videoUrl, res, activeChildRef, attempt = 1) {
+  const playerClient = YOUTUBE_CLIENTS_BY_ATTEMPT[attempt - 1] || 'web';
   const child = ytdlp.exec(
     videoUrl,
-    { format: 'best[ext=mp4]/best', output: '-', noWarnings: true, noPart: true },
+    {
+      format: 'best[ext=mp4]/best',
+      output: '-',
+      noWarnings: true,
+      noPart: true,
+      extractorArgs: `youtube:player_client=${playerClient}`,
+    },
     { buffer: false }
   );
   activeChildRef.current = child;

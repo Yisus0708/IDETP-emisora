@@ -3,7 +3,31 @@
  * y recepción del stream vía WebRTC (el navegador actúa como "viewer").
  */
 (() => {
-  const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+  // STUN solo no basta cuando emisor y estudiante están en redes distintas
+  // (fuera de una LAN, p. ej. con el sitio en Render): hace falta un
+  // servidor TURN que retransmita el video si la conexión directa falla por
+  // NAT/firewall. Se usa el TURN público gratuito de OpenRelay como
+  // respaldo; si en el futuro falla por límites de uso, reemplázalo por un
+  // proveedor propio (Twilio, Xirsys, Cloudflare Calls, coturn propio).
+  const ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+  ];
   const STORAGE_KEY = 'idetp_nickname';
 
   const socket = io();
