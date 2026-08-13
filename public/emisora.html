@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panel de Emisora - IDETP</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand"><span class="logo-dot"></span> Panel de Emisora IDETP</div>
+    <div class="topbar-right">
+      <span class="viewer-count"><span class="dot"></span><span id="viewerCount">0</span> estudiantes conectados</span>
+      <span id="liveBadge" class="badge badge-offline">Fuera de aire</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main class="main-col">
+      <div id="insecureContextBanner" class="critical-banner hidden"></div>
+
+      <div class="player-wrap" id="playerWrap">
+        <div class="player-topbadges">
+          <span id="playerLiveBadge" class="badge badge-live" style="display:none;">En vivo</span>
+        </div>
+        <video id="localPreview" autoplay playsinline muted></video>
+        <div class="player-overlay" id="playerOverlay">
+          <div class="icon">🎥</div>
+          <h2>Selecciona cámara y micrófono</h2>
+          <p>La vista previa aparecerá aquí antes de iniciar la transmisión.</p>
+        </div>
+      </div>
+
+      <button type="button" id="optionsToggle" class="options-toggle" aria-expanded="true">
+        <span>⚙️ Opciones de transmisión</span>
+        <span class="chevron">▾</span>
+      </button>
+
+      <div class="panel-grid" id="panelGrid">
+        <div class="control-card">
+          <h3>Fuente de transmisión</h3>
+
+          <div class="subtab-toggle">
+            <button type="button" id="tabCamera" class="subtab-btn active">🎥 Cámara</button>
+            <button type="button" id="tabFile" class="subtab-btn">📁 Archivo</button>
+            <button type="button" id="tabYoutube" class="subtab-btn">🔗 YouTube</button>
+          </div>
+
+          <div id="cameraSourcePanel" class="source-panel active">
+            <div class="field-row">
+              <label for="cameraSelect">Cámara (Webcam)</label>
+              <select id="cameraSelect"></select>
+            </div>
+            <div class="field-row">
+              <label for="micSelect">Micrófono / Entrada de audio</label>
+              <select id="micSelect"></select>
+            </div>
+            <div class="device-warning" id="deviceWarning"></div>
+          </div>
+
+          <div id="fileSourcePanel" class="source-panel">
+            <div class="file-drop">
+              <input type="file" id="fileInput" accept="audio/*,video/*" />
+              <div class="file-name" id="fileNameLabel"></div>
+            </div>
+          </div>
+
+          <div id="youtubeSourcePanel" class="source-panel">
+            <div class="youtube-input-row">
+              <input type="text" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." />
+              <button type="button" id="youtubeLoadBtn">Cargar</button>
+            </div>
+            <div class="device-warning" id="youtubeWarning">Requiere conexión a internet en este equipo.</div>
+          </div>
+
+          <div id="mediaMonitorWrap" class="source-panel">
+            <video id="mediaFilePreview" class="file-monitor" controls loop></video>
+            <div class="file-controls">
+              <label><input type="checkbox" id="fileLoopCheckbox" checked /> Repetir en bucle</label>
+            </div>
+          </div>
+
+          <button id="goLiveBtn" class="go-live-btn">Iniciar Transmisión</button>
+          <div class="panel-error" id="panelError"></div>
+        </div>
+
+        <div class="control-card">
+          <h3>Métricas en vivo</h3>
+          <div class="stat-grid">
+            <div class="stat-box">
+              <div class="stat-label">Tiempo en vivo</div>
+              <div class="stat-value" id="statTime">00:00:00</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Estudiantes</div>
+              <div class="stat-value" id="statViewers">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Bitrate</div>
+              <div class="stat-value" id="statBitrate">0 kbps</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Resolución</div>
+              <div class="stat-value" id="statResolution">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="sidebar">
+      <div class="chat-header">
+        <span>💬 Chat en vivo</span>
+        <span class="chat-nick">Emisora</span>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input id="chatInput" class="chat-role-broadcaster-input" type="text" maxlength="300" placeholder="Responder como Emisora..." autocomplete="off" />
+        <button id="chatSendBtn">Enviar</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer-note">Panel interno de transmisión — no compartir esta ruta con los estudiantes.</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/panel.js"></script>
+</body>
+</html>
