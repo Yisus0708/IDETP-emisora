@@ -457,7 +457,10 @@ a { color: var(--accent); }
   flex-direction: column;
   gap: 14px;
   width: 100%;
-  overflow: hidden;
+  max-height: 50vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
 }
 .panel-grid.collapsed {
   display: none;

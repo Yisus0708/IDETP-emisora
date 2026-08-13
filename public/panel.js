@@ -37,6 +37,7 @@
 
   const playerWrap = document.getElementById('playerWrap');
   const localPreview = document.getElementById('localPreview');
+  const reactionsLayer = document.getElementById('reactionsLayer');
   const playerOverlay = document.getElementById('playerOverlay');
   const optionsToggle = document.getElementById('optionsToggle');
   const panelGrid = document.getElementById('panelGrid');
@@ -329,13 +330,34 @@
     mediaFilePreview.onloadedmetadata = async () => {
       try {
         await mediaFilePreview.play();
-        buildFileStream(label);
       } catch (err) {
-        panelError.textContent = 'No se pudo reproducir: ' + err.message;
+        // Chrome puede bloquear el autoplay con audio si no reconoce un gesto
+        // de usuario reciente. Reintentamos silenciado: captureStream() sigue
+        // incluyendo el audio real en lo que se transmite a los estudiantes
+        // aunque la vista previa local del operador quede muda hasta que le
+        // dé clic (tiene controles nativos para reactivarlo).
+        if (err.name === 'NotAllowedError') {
+          try {
+            mediaFilePreview.muted = true;
+            await mediaFilePreview.play();
+            panelError.textContent = 'El navegador bloqueó el audio de la vista previa local; haz clic en el reproductor para escucharlo. La transmisión a los estudiantes sí incluye audio.';
+          } catch (err2) {
+            panelError.textContent = 'No se pudo reproducir: ' + err2.message;
+            if (sourceMode === 'youtube') youtubeWarning.textContent = 'Requiere conexión a internet en este equipo.';
+            return;
+          }
+        } else {
+          panelError.textContent = 'No se pudo reproducir: ' + err.message;
+          if (sourceMode === 'youtube') youtubeWarning.textContent = 'Requiere conexión a internet en este equipo.';
+          return;
+        }
       }
+      buildFileStream(label);
+      if (sourceMode === 'youtube') youtubeWarning.textContent = 'Requiere conexión a internet en este equipo.';
     };
     mediaFilePreview.onerror = () => {
       panelError.textContent = 'No se pudo cargar el contenido. Verifica el archivo o el enlace.';
+      if (sourceMode === 'youtube') youtubeWarning.textContent = 'Requiere conexión a internet en este equipo.';
     };
   }
 
@@ -357,10 +379,9 @@
       youtubeWarning.textContent = 'Pega un enlace de YouTube.';
       return;
     }
-    youtubeWarning.textContent = 'Cargando desde YouTube (requiere internet)...';
+    youtubeWarning.textContent = 'Cargando desde YouTube (requiere internet, puede tardar unos segundos)...';
     const proxyUrl = '/api/youtube?url=' + encodeURIComponent(link);
     loadMediaIntoPreview(proxyUrl, 'YouTube: ' + link);
-    youtubeWarning.textContent = 'Requiere conexión a internet en este equipo.';
   });
 
   youtubeUrlInput.addEventListener('keydown', (e) => {
@@ -557,6 +578,20 @@
   socket.on('viewers:count', (count) => {
     viewerCountEl.textContent = count;
     statViewers.textContent = count;
+  });
+
+  // ---------- Reacciones de estudiantes ----------
+  function spawnFloatingEmoji(emoji) {
+    const span = document.createElement('span');
+    span.className = 'floating-emoji';
+    span.textContent = emoji;
+    span.style.left = `${10 + Math.random() * 80}%`;
+    reactionsLayer.appendChild(span);
+    setTimeout(() => span.remove(), 2700);
+  }
+
+  socket.on('reaction:new', ({ emoji }) => {
+    spawnFloatingEmoji(emoji);
   });
 
   // ---------- Chat ----------

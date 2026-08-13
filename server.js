@@ -38,6 +38,11 @@ app.get('/panel-emisora', (req, res) => {
 // ---------------------------------------------------------------------------
 const YOUTUBE_URL_RE = /^https?:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|shorts\/|live\/)|youtu\.be\/)/i;
 const YOUTUBE_FETCH_ATTEMPTS = 2;
+// Si yt-dlp no entrega ningún byte en este tiempo (extracción colgada, red
+// lenta, YouTube bloqueando la petición sin que yt-dlp lo reporte como error),
+// lo matamos y reintentamos en vez de dejar al navegador "cargando" para
+// siempre sin ninguna señal de error.
+const YOUTUBE_START_TIMEOUT_MS = 15000;
 
 function streamYoutube(videoUrl, res, activeChildRef, attempt = 1) {
   const child = ytdlp.exec(
@@ -50,8 +55,16 @@ function streamYoutube(videoUrl, res, activeChildRef, attempt = 1) {
   let sentAnyData = false;
   let stderrTail = '';
 
+  const startTimeout = setTimeout(() => {
+    if (!sentAnyData) {
+      stderrTail = (stderrTail + `\n[timeout] yt-dlp no envió datos en ${YOUTUBE_START_TIMEOUT_MS}ms`).slice(-2000);
+      child.kill();
+    }
+  }, YOUTUBE_START_TIMEOUT_MS);
+
   child.stdout.once('data', () => {
     sentAnyData = true;
+    clearTimeout(startTimeout);
     if (!res.headersSent) res.setHeader('Content-Type', 'video/mp4');
   });
   // end:false en todos los intentos: si este intento falla, no queremos que
@@ -63,6 +76,7 @@ function streamYoutube(videoUrl, res, activeChildRef, attempt = 1) {
   });
 
   child.on('exit', (code) => {
+    clearTimeout(startTimeout);
     if (code === 0) {
       res.end();
       return;
@@ -75,9 +89,10 @@ function streamYoutube(videoUrl, res, activeChildRef, attempt = 1) {
       console.error('yt-dlp falló tras reintentos:', stderrTail);
       if (!res.headersSent) {
         res.status(502).send(
-          'No se pudo obtener el video de YouTube tras varios intentos. Puede que el enlace no sea válido, ' +
-          'el video no esté disponible en este país, o YouTube haya cambiado algo que yt-dlp aún no soporta ' +
-          '(prueba actualizarlo con "npm update yt-dlp-exec" o revisa la conexión a internet de este equipo).'
+          'No se pudo obtener el video de YouTube tras varios intentos (o se colgó sin responder). Puede que el ' +
+          'enlace no sea válido, el video no esté disponible en este país, la conexión a internet del equipo esté ' +
+          'fallando, o YouTube haya cambiado algo que yt-dlp aún no soporta (prueba actualizarlo con ' +
+          '"npm update yt-dlp-exec").'
         );
         return;
       }
